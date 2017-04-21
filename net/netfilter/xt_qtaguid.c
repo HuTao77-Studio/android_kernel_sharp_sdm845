@@ -1712,18 +1712,8 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	}
 	MT_DEBUG("qtaguid[%d]: sk=%p got_sock=%d fam=%d proto=%d\n",
 		 par->hooknum, sk, got_sock, par->family, ipx_proto(skb, par));
-	if (sk != NULL) {
-		set_sk_callback_lock = true;
-		read_lock_bh(&sk->sk_callback_lock);
-		MT_DEBUG("qtaguid[%d]: sk=%p->sk_socket=%p->file=%p\n",
-			par->hooknum, sk, sk->sk_socket,
-			sk->sk_socket ? sk->sk_socket->file : (void *)-1LL);
-		filp = sk->sk_socket ? sk->sk_socket->file : NULL;
-		MT_DEBUG("qtaguid[%d]: filp...uid=%u\n",
-			par->hooknum, filp ? filp->f_cred->fsuid : -1);
-	}
 
-	if (sk == NULL || sk->sk_socket == NULL) {
+	if (!sk) {
 		/*
 		 * Here, the qtaguid_find_sk() using connection tracking
 		 * couldn't find the owner, so for now we just count them
@@ -1731,9 +1721,7 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 		 */
 		if (do_tag_stat)
 			account_for_uid(skb, sk, 0, par);
-		MT_DEBUG("qtaguid[%d]: leaving (sk?sk->sk_socket)=%p\n",
-			par->hooknum,
-			sk ? sk->sk_socket : NULL);
+		MT_DEBUG("qtaguid[%d]: leaving (sk=NULL)\n", par->hooknum);
 		res = (info->match ^ info->invert) == 0;
 		atomic64_inc(&qtu_events.match_no_sk);
 		goto put_sock_ret_res;
@@ -1741,17 +1729,7 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 		res = false;
 		goto put_sock_ret_res;
 	}
-	filp = sk->sk_socket->file;
-	if (filp == NULL) {
-		MT_DEBUG("qtaguid[%d]: leaving filp=NULL\n", par->hooknum);
-		if (do_tag_stat)
-			account_for_uid(skb, sk, 0, par);
-		res = ((info->match ^ info->invert) &
-			(XT_QTAGUID_UID | XT_QTAGUID_GID)) == 0;
-		atomic64_inc(&qtu_events.match_no_sk_file);
-		goto put_sock_ret_res;
-	}
-	sock_uid = filp->f_cred->fsuid;
+	sock_uid = sk->sk_uid;
 	if (do_tag_stat)
 		account_for_uid(skb, sk, from_kuid(&init_user_ns, sock_uid),
 				par);
@@ -1762,18 +1740,39 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	 * or id     in range AND    inverted condition requested
 	 * Thus (!a && b) || (a && !b) == a ^ b
 	 */
-	if (info->match & XT_QTAGUID_UID)
-		if ((filp->f_cred->fsuid >= info->uid_min &&
-		     filp->f_cred->fsuid <= info->uid_max) ^
+	if (info->match & XT_QTAGUID_UID) {
+		kuid_t uid_min = make_kuid(&init_user_ns, info->uid_min);
+		kuid_t uid_max = make_kuid(&init_user_ns, info->uid_max);
+
+		if ((uid_gte(sock_uid, uid_min) &&
+		     uid_lte(sock_uid, uid_max)) ^
 		    !(info->invert & XT_QTAGUID_UID)) {
 			MT_DEBUG("qtaguid[%d]: leaving uid not matching\n",
 				 par->hooknum);
 			res = false;
 			goto put_sock_ret_res;
 		}
-	if (info->match & XT_QTAGUID_GID)
-		if ((filp->f_cred->fsgid >= info->gid_min &&
-				filp->f_cred->fsgid <= info->gid_max) ^
+	}
+	if (info->match & XT_QTAGUID_GID) {
+		kgid_t gid_min = make_kgid(&init_user_ns, info->gid_min);
+		kgid_t gid_max = make_kgid(&init_user_ns, info->gid_max);
+		set_sk_callback_lock = true;
+		read_lock_bh(&sk->sk_callback_lock);
+		MT_DEBUG("qtaguid[%d]: sk=%p->sk_socket=%p->file=%p\n",
+			 par->hooknum, sk, sk->sk_socket,
+			 sk->sk_socket ? sk->sk_socket->file : (void *)-1LL);
+		filp = sk->sk_socket ? sk->sk_socket->file : NULL;
+		if (!filp) {
+			res = ((info->match ^ info->invert) &
+			       XT_QTAGUID_GID) == 0;
+			atomic64_inc(&qtu_events.match_no_sk_gid);
+			goto put_sock_ret_res;
+		}
+		MT_DEBUG("qtaguid[%d]: filp...uid=%u\n",
+			 par->hooknum, filp ?
+			 from_kuid(&init_user_ns, filp->f_cred->fsuid) : -1);
+		if ((gid_gte(filp->f_cred->fsgid, gid_min) &&
+				gid_lte(filp->f_cred->fsgid, gid_max)) ^
 			!(info->invert & XT_QTAGUID_GID)) {
 			MT_DEBUG("qtaguid[%d]: leaving gid not matching\n",
 				par->hooknum);
@@ -1943,19 +1942,19 @@ static int qtaguid_ctrl_proc_show(struct seq_file *m, void *v)
 			   "match_found_sk_in_ct=%llu "
 			   "match_found_no_sk_in_ct=%llu "
 			   "match_no_sk=%llu "
-			   "match_no_sk_file=%llu\n",
-			   atomic64_read(&qtu_events.sockets_tagged),
-			   atomic64_read(&qtu_events.sockets_untagged),
-			   atomic64_read(&qtu_events.counter_set_changes),
-			   atomic64_read(&qtu_events.delete_cmds),
-			   atomic64_read(&qtu_events.iface_events),
-			   atomic64_read(&qtu_events.match_calls),
-			   atomic64_read(&qtu_events.match_calls_prepost),
-			   atomic64_read(&qtu_events.match_found_sk),
-			   atomic64_read(&qtu_events.match_found_sk_in_ct),
-			   atomic64_read(&qtu_events.match_found_no_sk_in_ct),
-			   atomic64_read(&qtu_events.match_no_sk),
-			   atomic64_read(&qtu_events.match_no_sk_file));
+			   "match_no_sk_gid=%llu\n",
+			   (u64)atomic64_read(&qtu_events.sockets_tagged),
+			   (u64)atomic64_read(&qtu_events.sockets_untagged),
+			   (u64)atomic64_read(&qtu_events.counter_set_changes),
+			   (u64)atomic64_read(&qtu_events.delete_cmds),
+			   (u64)atomic64_read(&qtu_events.iface_events),
+			   (u64)atomic64_read(&qtu_events.match_calls),
+			   (u64)atomic64_read(&qtu_events.match_calls_prepost),
+			   (u64)atomic64_read(&qtu_events.match_found_sk),
+			   (u64)atomic64_read(&qtu_events.match_found_sk_in_ct),
+			   (u64)atomic64_read(&qtu_events.match_found_no_sk_in_ct),
+			   (u64)atomic64_read(&qtu_events.match_no_sk),
+			   (u64)atomic64_read(&qtu_events.match_no_sk_gid));
 
 		/* Count the following as part of the last item_index. No need
 		 * to lock the sock_tag_list here since it is already locked when
