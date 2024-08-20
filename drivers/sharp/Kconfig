@@ -1,0 +1,9 @@
+#
+# SHARP configuration
+#
+
+menu "SHARP Device Drivers"
+
+source "drivers/sharp/proximity_light/Kconfig"
+
+endmenu
