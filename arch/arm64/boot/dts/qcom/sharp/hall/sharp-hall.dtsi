@@ -1,4 +1,5 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/*
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,16 +11,18 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
-
-#include "sdm845.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. SDM845 v1 SoC";
-	compatible = "qcom,sdm845";
-	qcom,board-id = <0 0>;
+&soc {
+	sharp,flip {
+		status = "ok";
+		compatible = "sharp,flip";
+		qcom,shflip-det-gpio = <&tlmm 124 0>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <124 0>;
+		interrupt-names = "shhall_det";
+		pinctrl-names = "shhall_det_active",
+				"shhall_det_suspend";
+		pinctrl-0 = <&shhall_det_active>;
+		pinctrl-1 = <&shhall_det_suspend>;
+	};
 };
 
-/* SH_BSP_CUST Add Start */
-#include "sharp/sharp-base-sdm845.dtsi"
-/* SH_BSP_CUST Add End */

@@ -10,16 +10,13 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
-
-#include "sdm845.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. SDM845 v1 SoC";
-	compatible = "qcom,sdm845";
-	qcom,board-id = <0 0>;
+// only write down delete-node/property for mainDTS
+&mdss_dsi0_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+	/delete-property/ qcom,dsi-pll-ssc-mode;
 };
 
-/* SH_BSP_CUST Add Start */
-#include "sharp/sharp-base-sdm845.dtsi"
-/* SH_BSP_CUST Add End */
+&mdss_dsi1_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+	/delete-property/ qcom,dsi-pll-ssc-mode;
+};

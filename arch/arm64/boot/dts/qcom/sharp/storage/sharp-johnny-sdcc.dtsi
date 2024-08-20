@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,16 +10,6 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
-
-#include "sdm845.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. SDM845 v1 SoC";
-	compatible = "qcom,sdm845";
-	qcom,board-id = <0 0>;
+&sdhc_2 {
+	status = "disabled";
 };
-
-/* SH_BSP_CUST Add Start */
-#include "sharp/sharp-base-sdm845.dtsi"
-/* SH_BSP_CUST Add End */

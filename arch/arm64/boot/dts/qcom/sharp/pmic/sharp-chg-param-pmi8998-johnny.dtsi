@@ -10,16 +10,22 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
 
-#include "sdm845.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. SDM845 v1 SoC";
-	compatible = "qcom,sdm845";
-	qcom,board-id = <0 0>;
+/****************************************/
+/* pmi8998_charger		*/
+/****************************************/
+&pmi8998_charger {
+	qcom,hvdcp-disable;
 };
 
-/* SH_BSP_CUST Add Start */
-#include "sharp/sharp-base-sdm845.dtsi"
-/* SH_BSP_CUST Add End */
+/****************************************/
+/* pmi8998_fg		*/
+/****************************************/
+&pmi8998_fg {
+	qcom,fg-rsense-sel = <2>;
+};
+
+/****************************************/
+/* thermal_zones		*/
+/****************************************/
+

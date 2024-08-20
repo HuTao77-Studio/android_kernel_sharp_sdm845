@@ -10,16 +10,22 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
+&soc {
+	sharp_mdss_panel_det: sharp,mdss_panel_det {
+		compatible = "sharp,panel_det";
+		detin =<&pmi8998_gpios 11 0>;
+		interrupts = <0x2 0xca 0x0>;
+		interrupt-parent = <&spmi_bus>;
+		interrupt-names = "detin";
+		status="ok";
+	};
 
-#include "sdm845.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. SDM845 v1 SoC";
-	compatible = "qcom,sdm845";
-	qcom,board-id = <0 0>;
+	sharp_mdss_panel_mipierr: sharp,mdss_panel_mipierr {
+		compatible = "sharp,panel_mipierr";
+		mipierr = <&tlmm 11 0>;
+		interrupts = <11 0>;
+		interrupt-parent = <&tlmm>;
+		interrupt-names = "mipierr";
+		status="ok";
+	};
 };
-
-/* SH_BSP_CUST Add Start */
-#include "sharp/sharp-base-sdm845.dtsi"
-/* SH_BSP_CUST Add End */
