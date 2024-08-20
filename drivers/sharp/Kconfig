@@ -6,4 +6,6 @@ menu "SHARP Device Drivers"
 
 source "drivers/sharp/proximity_light/Kconfig"
 
+source "drivers/sharp/proximity/Kconfig"
+
 endmenu
