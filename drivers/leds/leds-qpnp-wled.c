@@ -427,6 +427,9 @@ struct qpnp_wled {
 	bool			module_dis_perm;
 	ktime_t			start_ovp_fault_time;
 };
+#ifdef CONFIG_SHARP_DISPLAY /* CUST_ID_00023 */
+static struct qpnp_wled *gwled;
+#endif /* CONFIG_SHARP_DISPLAY */
 
 static int qpnp_wled_step_delay_us = 52000;
 module_param_named(
@@ -2783,6 +2786,9 @@ static int qpnp_wled_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_SHARP_DISPLAY /* CUST_ID_00023 */
+	gwled = wled;
+#endif /* CONFIG_SHARP_DISPLAY */
 	return 0;
 
 sysfs_fail:
@@ -2802,6 +2808,9 @@ static int qpnp_wled_remove(struct platform_device *pdev)
 	struct qpnp_wled *wled = dev_get_drvdata(&pdev->dev);
 	int i;
 
+#ifdef CONFIG_SHARP_DISPLAY /* CUST_ID_00023 */
+	gwled = NULL;
+#endif /* CONFIG_SHARP_DISPLAY */
 	for (i = 0; i < ARRAY_SIZE(qpnp_wled_attrs); i++)
 		sysfs_remove_file(&wled->cdev.dev->kobj,
 				&qpnp_wled_attrs[i].attr);
@@ -2843,3 +2852,118 @@ module_exit(qpnp_wled_exit);
 MODULE_DESCRIPTION("QPNP WLED driver");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("leds:leds-qpnp-wled");
+
+#ifdef CONFIG_SHARP_DISPLAY /* CUST_ID_00023 */
+int qpnp_wled_flbl_led_on(void)
+{
+	int rc;
+
+	if (!gwled) {
+		return -EINVAL;
+	}
+	pr_debug("%s: in\n", __func__);
+
+	/* CABC LED1 */
+	rc = qpnp_wled_write_reg(gwled, QPNP_WLED_CABC_REG(gwled->sink_base,
+			gwled->strings[0]), 0x80);
+	if (rc) {
+		return rc;
+	}
+
+	/* CABC LED2 */
+	rc = qpnp_wled_write_reg(gwled, QPNP_WLED_CABC_REG(gwled->sink_base,
+			gwled->strings[1]), 0x80);
+	if (rc) {
+		return rc;
+	}
+
+	return rc;
+}
+
+int qpnp_wled_flbl_bl_on(void)
+{
+	int rc;
+	u8 reg;
+
+	if (!gwled) {
+		return -EINVAL;
+	}
+	pr_debug("%s: in\n", __func__);
+
+	/* BL mode */
+	rc = qpnp_wled_read_reg(gwled, QPNP_WLED_MOD_REG(gwled->sink_base), &reg);
+	if (rc < 0) {
+		return rc;
+	}
+
+	reg &= QPNP_WLED_DIM_HYB_MASK;
+	reg |= (0 << QPNP_WLED_DIM_HYB_SHIFT);
+	reg &= QPNP_WLED_DIM_ANA_MASK;
+	reg |= QPNP_WLED_DIM_ANALOG;
+
+	rc = qpnp_wled_write_reg(gwled, QPNP_WLED_MOD_REG(gwled->sink_base), reg);
+	if (rc) {
+		return rc;
+	}
+
+	gwled->dim_mode = QPNP_WLED_DIM_ANALOG;
+
+	return rc;
+}
+
+
+int qpnp_wled_flbl_led_off(void)
+{
+	int rc;
+
+	if (!gwled) {
+		return -EINVAL;
+	}
+	pr_debug("%s :in\n", __func__);
+
+	/* CABC LED1 */
+	rc = qpnp_wled_write_reg(gwled, QPNP_WLED_CABC_REG(gwled->sink_base,
+			gwled->strings[0]), 0x00);
+	if (rc) {
+		return rc;
+	}
+
+	/* CABC LED2 */
+	rc = qpnp_wled_write_reg(gwled, QPNP_WLED_CABC_REG(gwled->sink_base,
+		gwled->strings[1]), 0x00);
+	if (rc) {
+		return rc;
+	}
+
+	return rc;
+}
+
+int qpnp_wled_flbl_bl_off(void)
+{
+	int rc;
+	u8 reg;
+
+	if (!gwled) {
+		return -EINVAL;
+	}
+	pr_debug("%s: in\n", __func__);
+
+	/* BL mode */
+	rc = qpnp_wled_read_reg(gwled, QPNP_WLED_MOD_REG(gwled->sink_base), &reg);
+	if (rc < 0) {
+		return rc;
+	}
+
+	reg &= QPNP_WLED_DIM_HYB_MASK;
+	reg |= (1 << QPNP_WLED_DIM_HYB_SHIFT);
+
+	rc = qpnp_wled_write_reg(gwled, QPNP_WLED_MOD_REG(gwled->sink_base), reg);
+	if (rc) {
+		return rc;
+	}
+
+	gwled->dim_mode = QPNP_WLED_DIM_HYBRID;
+
+	return rc;
+}
+#endif /* CONFIG_SHARP_DISPLAY */
