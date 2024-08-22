@@ -38,6 +38,33 @@
 #include "codecs/wcd934x/wcd934x.h"
 #include "codecs/wcd934x/wcd934x-mbhc.h"
 #include "codecs/wsa881x.h"
+#ifdef CONFIG_SH_AUDIO_DRIVER /*A-004*/
+#ifdef CONFIG_ARCH_JOHNNY
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+#include "codecs/shaudio_wsa8815.h"
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_JOHNNY */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*A-004*/
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* For LKM */
+
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+#include <linux/notifier.h>
+#include "sharp/shaudio_sdm845.h"
+#ifdef CONFIG_SND_SOC_NXP_CHIP
+#include "sharp/shaudio_tfa98xx_notifier.h"
+#endif /* CONFIG_SND_SOC_NXP_CHIP */
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* For LKM */
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /*A-004*/
+#ifdef CONFIG_ARCH_JOHNNY
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+static int wsa8815_smartpa_detect_finished = 0;
+static int wsa8815_sdm845_notifier_register_count = 0;
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_JOHNNY */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*A-004*/
 
 #define DRV_NAME "sdm845-asoc-snd"
 
@@ -77,6 +104,24 @@
 
 #define TDM_MAX_SLOTS		8
 #define TDM_SLOT_WIDTH_BITS	32
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /*B-019*/
+#ifdef CONFIG_ARCH_PUCCI
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+static BLOCKING_NOTIFIER_HEAD(speaker_shub_api_notifier_list);
+int register_tfa98xx_shub_api_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&speaker_shub_api_notifier_list, nb);
+}
+EXPORT_SYMBOL(register_tfa98xx_shub_api_notifier);
+int unregister_tfa98xx_shub_api_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&speaker_shub_api_notifier_list, nb);
+}
+EXPORT_SYMBOL(unregister_tfa98xx_shub_api_notifier);
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_PUCCI */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*B-019*/
 
 enum {
 	SLIM_RX_0 = 0,
@@ -179,6 +224,12 @@ struct msm_asoc_mach_data {
 	struct device_node *hph_en0_gpio_p; /* used by pinctrl API */
 	struct snd_info_entry *codec_root;
 	struct msm_pinctrl_info pinctrl_info;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_ARCH_PUCCI
+	int lineout_amp_gpio;
+	struct pinctrl *lineout_amp_gpio_p; /* used by pinctrl API */
+#endif
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 };
 
 struct msm_asoc_wcd93xx_codec {
@@ -597,6 +648,53 @@ static void *def_tavil_mbhc_cal(void);
 static int msm_snd_enable_codec_ext_clk(struct snd_soc_codec *codec,
 					int enable, bool dapm);
 static int msm_wsa881x_init(struct snd_soc_component *component);
+
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_SND_SOC_NXP_CHIP
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+static BLOCKING_NOTIFIER_HEAD(tfa98xx_sdm845_notifier_list);
+
+int register_tfa98xx_sdm845_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&tfa98xx_sdm845_notifier_list, nb);
+}
+EXPORT_SYMBOL(register_tfa98xx_sdm845_notifier);
+
+int unregister_tfa98xx_sdm845_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&tfa98xx_sdm845_notifier_list, nb);
+}
+EXPORT_SYMBOL(unregister_tfa98xx_sdm845_notifier);
+
+static void msm_tfa98xx_later_probe(struct platform_device *pdev)
+{
+	dev_err(&pdev->dev, "%s()\n", __func__);
+	if (blocking_notifier_call_chain(&tfa98xx_sdm845_notifier_list, TFA98XX_NOTIFIER_DETECTED, NULL)) {
+		blocking_notifier_call_chain(&tfa98xx_sdm845_notifier_list, TFA98XX_NOTIFIER_LATER_PROBE, NULL);
+	} else {
+		dev_err(&pdev->dev, "%s(): tfa98xx unavailable\n", __func__);
+	}
+	return;
+}
+#else
+extern int tfa98xx_later_probe(void);
+extern bool tfa98xx_detected(void);
+
+static void msm_tfa98xx_later_probe(struct platform_device *pdev)
+{
+	dev_err(&pdev->dev, "%s()\n", __func__);
+
+	if (tfa98xx_detected()) {
+		tfa98xx_later_probe();
+	} else {
+		dev_err(&pdev->dev, "%s(): tfa98xx unavailable\n", __func__);
+	}
+	return;
+}
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif  /* CONFIG_SND_SOC_NXP_CHIP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 
 /*
  * Need to report LINEIN
@@ -3255,7 +3353,78 @@ static int msm_mclk_event(struct snd_soc_dapm_widget *w,
 	}
 	return 0;
 }
-
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_ARCH_PUCCI
+static int msm_lineout_amp_event(struct snd_soc_dapm_widget *w,
+			       struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct snd_soc_card *card = codec->component.card;
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct pinctrl_state *amp_pinctrl_active = NULL;
+	struct pinctrl_state *amp_pinctrl_sleep = NULL;
+	int ret;
+	pdata->lineout_amp_gpio_p = devm_pinctrl_get(card->dev);
+	if(pdata->lineout_amp_gpio >= 0){
+		ret = gpio_request(pdata->lineout_amp_gpio, "lineoutamp_enable");
+		if (ret) {
+			dev_err(card->dev,
+				"%s: Failed to request codec lineout amp en gpio %d error %d\n",
+				__func__, pdata->lineout_amp_gpio, ret);
+		}
+	}
+	if(pdata->lineout_amp_gpio_p){
+		amp_pinctrl_active = pinctrl_lookup_state(
+						pdata->lineout_amp_gpio_p, "amp_active");
+		if (IS_ERR_OR_NULL(amp_pinctrl_active)) {
+			dev_err(card->dev,
+				"%s: Cannot get aud_active pinctrl state:%ld\n",
+				__func__, PTR_ERR(amp_pinctrl_active));
+		}
+		amp_pinctrl_sleep = pinctrl_lookup_state(
+						pdata->lineout_amp_gpio_p, "amp_sleep");
+		if (IS_ERR_OR_NULL(amp_pinctrl_sleep)) {
+			dev_err(card->dev,
+				"%s: Cannot get aud_sleep pinctrl state:%ld\n",
+				__func__, PTR_ERR(amp_pinctrl_sleep));
+		}
+	}
+	switch (event) {
+		case SND_SOC_DAPM_POST_PMU:
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-019 */
+#ifdef CONFIG_ARCH_PUCCI
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+			blocking_notifier_call_chain(&speaker_shub_api_notifier_list, 1, NULL);
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_PUCCI */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* B-019 */
+			if(pdata->lineout_amp_gpio_p){
+				pinctrl_select_state(pdata->lineout_amp_gpio_p,amp_pinctrl_active);
+			}else if(pdata->lineout_amp_gpio >= 0){
+				gpio_set_value_cansleep(pdata->lineout_amp_gpio, 1);
+			}else
+				pr_err("%s,cann't enable lineout amp gpio",__func__);
+			break;
+		case SND_SOC_DAPM_PRE_PMD:
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-019 */
+#ifdef CONFIG_ARCH_PUCCI
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+			blocking_notifier_call_chain(&speaker_shub_api_notifier_list, 0, NULL);
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_PUCCI */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* B-019 */
+			if(pdata->lineout_amp_gpio_p){
+				pinctrl_select_state(pdata->lineout_amp_gpio_p,amp_pinctrl_sleep);
+			}else if(pdata->lineout_amp_gpio >= 0){
+				gpio_set_value_cansleep(pdata->lineout_amp_gpio, 0);
+			}else
+				pr_err("%s,cann't disable lineout amp gpio",__func__);
+			break;
+	}
+	return 0;
+}
+#endif
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 static int msm_hifi_ctrl_event(struct snd_soc_dapm_widget *w,
 			       struct snd_kcontrol *k, int event)
 {
@@ -3298,11 +3467,19 @@ static const struct snd_soc_dapm_widget msm_dapm_widgets[] = {
 	SND_SOC_DAPM_SUPPLY("MCLK TX",  SND_SOC_NOPM, 0, 0,
 	msm_mclk_tx_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_SPK("Lineout_1 amp", NULL),
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_ARCH_PUCCI
+	SND_SOC_DAPM_SPK("Lineout_1 amp", msm_lineout_amp_event),
+#endif
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 	SND_SOC_DAPM_SPK("Lineout_2 amp", NULL),
 	SND_SOC_DAPM_SPK("hifi amp", msm_hifi_ctrl_event),
 	SND_SOC_DAPM_MIC("Handset Mic", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-003 */
+	SND_SOC_DAPM_MIC("Primary Mic", NULL),
+	SND_SOC_DAPM_MIC("Secondary Mic", NULL),
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-003*/
 	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic5", NULL),
@@ -4097,6 +4274,10 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_ignore_suspend(dapm, "VIINPUT");
 	snd_soc_dapm_ignore_suspend(dapm, "ANC HPHL");
 	snd_soc_dapm_ignore_suspend(dapm, "ANC HPHR");
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-003 */
+	snd_soc_dapm_ignore_suspend(dapm, "Primary Mic");
+	snd_soc_dapm_ignore_suspend(dapm, "Secondary Mic");
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-003*/
 
 	snd_soc_dapm_sync(dapm);
 
@@ -5569,6 +5750,40 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
 	},
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_SND_SOC_NXP_CHIP
+	{
+		.name = "Tertiary MI2S TX_Hostless",
+		.stream_name = "Tertiary MI2S_TX Hostless Capture",
+		.cpu_dai_name = "TERT_MI2S_TX_HOSTLESS",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.dpcm_capture = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.codec_name = "snd-soc-dummy",
+	},
+	{
+		.name = "Tertiary MI2S RX_Hostless",
+		.stream_name = "Tertiary MI2S_RX Hostless Playback",
+		.cpu_dai_name = "TERT_MI2S_RX_HOSTLESS",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.dpcm_playback = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+				SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.codec_name = "snd-soc-dummy",
+	},
+#endif  /* CONFIG_SND_SOC_NXP_CHIP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 };
 
 static struct snd_soc_dai_link msm_tavil_fe_dai_links[] = {
@@ -6149,6 +6364,27 @@ static struct snd_soc_dai_link msm_tavil_be_dai_links[] = {
 		.ignore_pmdown_time = 1,
 	},
 };
+#ifdef CONFIG_SH_AUDIO_DRIVER  /*A-004*/
+#ifdef CONFIG_ARCH_JOHNNY
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+static int shub_audio_wsa8815_handler_func(struct notifier_block *nb,
+                                                 unsigned long on, void *unused)
+{
+	pr_info("%s,wsa register ret is %lu",__func__,on);
+	if(on == 1){
+		++wsa8815_smartpa_detect_finished;
+	}else
+		wsa8815_smartpa_detect_finished = -1;
+	pr_err("wsa8815_smartpa_detect_finished is %d",wsa8815_smartpa_detect_finished);
+	return 0;
+}
+
+static struct notifier_block shub_audio_wsa8815_handler = {
+    .notifier_call = shub_audio_wsa8815_handler_func,
+};
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_JOHNNY */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*A-004*/
 
 static struct snd_soc_dai_link msm_wcn_be_dai_links[] = {
 	{
@@ -6805,6 +7041,23 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		}
 		if (of_property_read_bool(dev->of_node,
 					  "qcom,mi2s-audio-intf")) {
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_SND_SOC_NXP_CHIP
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+			if (!blocking_notifier_call_chain(&tfa98xx_sdm845_notifier_list, TFA98XX_NOTIFIER_DETECTED, NULL)) {
+#else
+			if (!tfa98xx_detected()) {
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+				dev_err(dev, "%s(): Remove tfa98xx because err\n",
+						__func__);
+				msm_mi2s_be_dai_links[4].codec_name = "msm-stub-codec.1";
+				msm_mi2s_be_dai_links[4].codec_dai_name = "msm-stub-rx";
+			} else {
+				msm_mi2s_be_dai_links[4].codec_name = "tfa98xx-aif";
+				msm_mi2s_be_dai_links[4].codec_dai_name = "tfa98xx-aif";
+			}
+#endif  /* CONFIG_SND_SOC_NXP_CHIP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 			memcpy(msm_tavil_snd_card_dai_links + total_links,
 			       msm_mi2s_be_dai_links,
 			       sizeof(msm_mi2s_be_dai_links));
@@ -7132,7 +7385,16 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "No platform supplied from device tree\n");
 		return -EINVAL;
 	}
-
+#ifdef CONFIG_SH_AUDIO_DRIVER /*A-004*/
+#ifdef CONFIG_ARCH_JOHNNY
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+	if(wsa8815_sdm845_notifier_register_count == 0){
+		register_wsa8815_sdm845_notifier(&shub_audio_wsa8815_handler);
+		wsa8815_sdm845_notifier_register_count = 1;
+	}
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_JOHNNY */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*A-004*/
 	pdata = devm_kzalloc(&pdev->dev,
 			sizeof(struct msm_asoc_mach_data), GFP_KERNEL);
 	if (!pdata)
@@ -7161,6 +7423,18 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 			ret);
 		goto err;
 	}
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_ARCH_PUCCI
+	pdata->lineout_amp_gpio= of_get_named_gpio(card->dev->of_node,
+				    "qcom,lineout-amp-gpio", 0);
+	if (!gpio_is_valid(pdata->lineout_amp_gpio)) {
+		dev_err(card->dev, "%s, property %s not in node %s",
+			__func__, "qcom,lineout-amp-gpio",
+			card->dev->of_node->full_name);
+	}
+#endif
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 
 	match = of_match_node(sdm845_asoc_machine_of_match,
 			pdev->dev.of_node);
@@ -7195,8 +7469,26 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		goto err;
 	}
 	ret = msm_init_wsa_dev(pdev, card);
-	if (ret)
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_ARCH_JOHNNY
+	if (ret){
+		if(wsa8815_smartpa_detect_finished >= 0){
+			ret = -EPROBE_DEFER;
+			goto err;
+		}else
+			pr_err("wsa8815_smartpa_detect_finished is -1\n");
+	}
+#else
+	if (ret){
 		goto err;
+
+	}
+#endif /* CONFIG_ARCH_JOHNNY */
+#else
+	if (ret){
+		goto err;
+	}
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* A-004 */
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret == -EPROBE_DEFER) {
@@ -7302,6 +7594,11 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 		pr_err("%s: Audio notifier register failed ret = %d\n",
 			__func__, ret);
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* A-004 */
+#ifdef CONFIG_SND_SOC_NXP_CHIP
+		msm_tfa98xx_later_probe(pdev);
+#endif /* CONFIG_SND_SOC_NXP_CHIP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* A-004 */
 	return 0;
 err:
 	msm_release_pinctrl(pdev);
@@ -7324,6 +7621,15 @@ static int msm_asoc_machine_remove(struct platform_device *pdev)
 
 	msm_release_pinctrl(pdev);
 	snd_soc_unregister_card(card);
+#ifdef CONFIG_SH_AUDIO_DRIVER /*A-004*/
+#ifdef CONFIG_ARCH_JOHNNY
+#ifdef CONFIG_SND_SOC_TREBLE_ENABLE
+	unregister_wsa8815_sdm845_notifier(&shub_audio_wsa8815_handler);
+	wsa8815_smartpa_detect_finished = 0;
+	wsa8815_sdm845_notifier_register_count = 0;
+#endif /* CONFIG_SND_SOC_TREBLE_ENABLE */
+#endif /* CONFIG_ARCH_JOHNNY */
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*A-004*/
 	return 0;
 }
 
