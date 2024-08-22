@@ -556,7 +556,9 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 	struct snd_soc_codec *codec = mbhc->codec;
 	bool is_pa_on = false;
 	u8 fsm_en = 0;
-
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-023 */
+	bool flg_dtv_antenna = false;
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* B-023 */
 	WCD_MBHC_RSC_ASSERT_LOCKED(mbhc);
 
 	pr_debug("%s: enter insertion %d hph_status %x\n",
@@ -675,6 +677,9 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			mbhc->jiffies_atreport = jiffies;
 		} else if (jack_type == SND_JACK_LINEOUT) {
 			mbhc->current_plug = MBHC_PLUG_TYPE_HIGH_HPH;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-023 */
+			flg_dtv_antenna = true;
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* B-023 */
 		} else if (jack_type == SND_JACK_ANC_HEADPHONE)
 			mbhc->current_plug = MBHC_PLUG_TYPE_ANC_HEADPHONE;
 
@@ -695,6 +700,7 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 					&mbhc->zl, &mbhc->zr);
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN,
 						 fsm_en);
+#ifndef CONFIG_SH_AUDIO_DRIVER /* A-009 */
 			if ((mbhc->zl > mbhc->mbhc_cfg->linein_th &&
 				mbhc->zl < MAX_IMPED) &&
 				(mbhc->zr > mbhc->mbhc_cfg->linein_th &&
@@ -715,15 +721,25 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				pr_debug("%s: Marking jack type as SND_JACK_LINEOUT\n",
 				__func__);
 			}
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* A-009 */
 		}
 
 		mbhc->hph_status |= jack_type;
 
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-023 */
+        if(flg_dtv_antenna == true){
+            pr_debug("but only dtv_antenna isn't reported insertion as LINEOUT\n");
+            wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
+                    (SND_JACK_UNSUPPORTED | SND_JACK_MECHANICAL),
+                     WCD_MBHC_JACK_MASK);
+        }else{
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);
+        }
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* B-023 */
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
 	}
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
@@ -777,6 +793,8 @@ void wcd_mbhc_find_plug_and_report(struct wcd_mbhc *mbhc,
 
 	pr_debug("%s: enter current_plug(%d) new_plug(%d)\n",
 		 __func__, mbhc->current_plug, plug_type);
+
+	mbhc->new_plug = plug_type;
 
 	WCD_MBHC_RSC_ASSERT_LOCKED(mbhc);
 

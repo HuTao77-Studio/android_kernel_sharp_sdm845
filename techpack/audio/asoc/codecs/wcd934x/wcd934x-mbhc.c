@@ -732,7 +732,8 @@ right_ch_impedance:
 	zMono = ((*zl) * 9) / ((*zl) + 9);
 	z_diff1 = (z1Ls > zMono) ? (z1Ls - zMono) : (zMono - z1Ls);
 	z_diff2 = ((*zl) > z1Ls) ? ((*zl) - z1Ls) : (z1Ls - (*zl));
-	if ((z_diff1 * (*zl + z1Ls)) > (z_diff2 * (z1Ls + zMono))) {
+	if (((z_diff1 * (*zl + z1Ls)) > (z_diff2 * (z1Ls + zMono))) ||
+        (mbhc->new_plug == MBHC_PLUG_TYPE_HEADSET) || (mbhc->new_plug == MBHC_PLUG_TYPE_HEADPHONE)) {
 		dev_dbg(codec->dev, "%s: stereo plug type detected\n",
 			__func__);
 		mbhc->hph_type = WCD_MBHC_HPH_STEREO;
