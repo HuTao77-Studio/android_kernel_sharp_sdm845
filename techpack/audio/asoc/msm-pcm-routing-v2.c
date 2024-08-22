@@ -45,6 +45,10 @@
 #include "msm-dolby-dap-config.h"
 #include "msm-ds2-dap-config.h"
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-003 */
+#include <linux/spinlock.h>
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* B-003 */
+
 #ifndef CONFIG_DOLBY_DAP
 #undef DOLBY_ADM_COPP_TOPOLOGY_ID
 #define DOLBY_ADM_COPP_TOPOLOGY_ID 0xFFFFFFFE
@@ -58,6 +62,11 @@
 static struct mutex routing_lock;
 
 static struct cal_type_data *cal_data[MAX_ROUTING_CAL_TYPES];
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-003 */
+static int a2dp_mode = 0;
+static DEFINE_SPINLOCK(spinlock);
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* B-003 */
 
 static int fm_switch_enable;
 static int hfp_switch_enable;
@@ -19709,6 +19718,53 @@ err:
 	msm_routing_delete_cal_data();
 	return ret;
 }
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* B-003 */
+void msm_routing_set_a2dp_mode(int mode)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&spinlock, flags);
+	a2dp_mode = mode;
+	spin_unlock_irqrestore(&spinlock, flags);
+}
+EXPORT_SYMBOL_GPL(msm_routing_set_a2dp_mode);
+
+int msm_routing_get_is_music_play(void)
+{
+	int music_type = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&spinlock, flags);
+	if (a2dp_mode)
+		music_type |= 1 << 3;
+/* COORDINATOR Qualcomm_CS BUILDERR MODIFY start */
+#if 0
+	if (test_bit(0, &msm_bedais[2].fe_sessions))
+		music_type |= 1 << 0;
+	if (test_bit(4, &msm_bedais[2].fe_sessions))
+		music_type |= 1 << 1;
+	if (test_bit(1, &msm_bedais[2].fe_sessions))
+		music_type |= 1 << 2;
+	if (test_bit(3, &msm_bedais[2].fe_sessions))
+		music_type |= 1 << 4;
+#else
+	if (test_bit(0, &msm_bedais[2].fe_sessions[0]))
+		music_type |= 1 << 0;
+	if (test_bit(4, &msm_bedais[2].fe_sessions[0]))
+		music_type |= 1 << 1;
+	if (test_bit(1, &msm_bedais[2].fe_sessions[0]))
+		music_type |= 1 << 2;
+	if (test_bit(3, &msm_bedais[2].fe_sessions[0]))
+		music_type |= 1 << 4;
+#endif
+/* COORDINATOR Qualcomm_CS BUILDERR MODIFY end */
+	spin_unlock_irqrestore(&spinlock, flags);
+	return music_type;
+}
+EXPORT_SYMBOL_GPL(msm_routing_get_is_music_play);
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* B-003 */
+
 
 static int __init msm_soc_routing_platform_init(void)
 {
