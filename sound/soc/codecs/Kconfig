@@ -1102,4 +1102,9 @@ config SND_SOC_TFA98XX
 	depends on I2C
 	help
 	Enables support for NXP98xx Smart PA.
+
+#/* SH_AUDIO_DRIVER -> */ /*A-004*/
+source "sound/soc/codecs/tfa/Kconfig"
+#/* SH_AUDIO_DRIVER <- */ /*A-004*/
+
 endmenu
