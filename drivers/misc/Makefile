@@ -72,6 +72,7 @@ obj-$(CONFIG_SHARP_SYSTIME_CUST) += sh_systime.o
 obj-$(CONFIG_SHARP_SHTERM)		+= shterm/
 obj-$(CONFIG_SHARP_FLIP)	+= shflip/
 obj-$(CONFIG_SHARP_HALL)	+= shhall/
+obj-$(CONFIG_BATTERY_SHARP)	+= shbatt/
 
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_bugs.o
