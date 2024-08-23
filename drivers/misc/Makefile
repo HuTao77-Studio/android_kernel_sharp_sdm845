@@ -66,6 +66,7 @@ obj-$(CONFIG_MEMORY_STATE_TIME)	+= memory_state_time.o
 obj-$(CONFIG_SHARP_SYSTIME_CUST) += sh_systime.o
 obj-$(CONFIG_SHARP_SHTERM)		+= shterm/
 obj-$(CONFIG_SHARP_FLIP)	+= shflip/
+obj-$(CONFIG_SHARP_HALL)	+= shhall/
 
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_bugs.o
