@@ -862,6 +862,7 @@ source "drivers/misc/cxl/Kconfig"
 source "drivers/misc/fpr_FingerprintCard/Kconfig"
 source "drivers/misc/shterm/Kconfig"
 source "drivers/misc/shflip/Kconfig"
+source "drivers/misc/shhall/Kconfig"
 endmenu
 
 config OKL4_LINK_SHBUF
