@@ -1,0 +1,9 @@
+#
+# SHARP configuration
+#
+
+menu "SHARP Device Drivers for Qualcomm SOC"
+
+source "drivers/soc/qcom/sharp/pnp/Kconfig"
+
+endmenu
