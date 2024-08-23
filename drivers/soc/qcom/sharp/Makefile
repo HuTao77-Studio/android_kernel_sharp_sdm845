@@ -2,6 +2,8 @@
 # SHARP configuration
 #
 
+obj-$(CONFIG_SHARP_SHLOG) += shrlog.o
+
 obj-$(CONFIG_SHARP_PNP) += pnp/
 
 # for SHARP_PANIC_ON_PWRKEY
