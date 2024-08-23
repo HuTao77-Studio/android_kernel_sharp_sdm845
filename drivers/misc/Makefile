@@ -69,6 +69,7 @@ obj-$(CONFIG_VXR200_XR_MISC) += vxr7200.o
 
 obj-$(CONFIG_SHARP_SYSTIME_CUST) += sh_systime.o
 obj-$(CONFIG_SHARP_SHTERM)		+= shterm/
+obj-$(CONFIG_SHARP_FLIP)	+= shflip/
 
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_bugs.o
