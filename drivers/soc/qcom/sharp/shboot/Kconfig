@@ -1,0 +1,10 @@
+# drivers/soc/qcom/sharp/shboot/Kconfig
+
+menu "Sharp Boot Driver"
+
+config SHARP_BOOT
+	bool "SHARP BOOT DRIVER"
+	depends on SHARP_SMEM_CUST
+	default n
+
+endmenu
