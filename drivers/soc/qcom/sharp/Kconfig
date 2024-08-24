@@ -6,4 +6,6 @@ menu "SHARP Device Drivers for Qualcomm SOC"
 
 source "drivers/soc/qcom/sharp/shrlog/Kconfig"
 
+source "drivers/soc/qcom/sharp/shtimer/Kconfig"
+
 endmenu
