@@ -55,6 +55,10 @@ config ANDROID_LMK_NOTIFY_TRIGGER
 
 source "drivers/staging/android/ion/Kconfig"
 
+config ANDROID_ENGINEERING
+	bool "Android for Engineering"
+	default n
+
 endif # if ANDROID
 
 endmenu
