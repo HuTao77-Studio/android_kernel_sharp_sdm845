@@ -1,0 +1,10 @@
+# drivers/soc/qcom/sharp/shdiag/Kconfig
+
+menu "SHARP SHDIAG SMEM driver"
+
+config SHARP_SHDIAG_SMD
+	tristate "SHARP SHDIAG SMEM DRIVER"
+	depends on SHARP_SMEM_CUST
+	default n
+
+endmenu
