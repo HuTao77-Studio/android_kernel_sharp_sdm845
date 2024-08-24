@@ -8,4 +8,6 @@ source "drivers/soc/qcom/sharp/shrlog/Kconfig"
 
 source "drivers/soc/qcom/sharp/shtimer/Kconfig"
 
+source "drivers/soc/qcom/sharp/shdiag/Kconfig"
+
 endmenu
