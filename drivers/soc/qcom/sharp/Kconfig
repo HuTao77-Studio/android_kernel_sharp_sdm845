@@ -111,4 +111,6 @@ config SHARP_SUPPORT_DLOAD_BOOTPARAM
 
 source "drivers/soc/qcom/sharp/pnp/Kconfig"
 
+source "drivers/soc/qcom/sharp/shboot/Kconfig"
+
 endmenu
