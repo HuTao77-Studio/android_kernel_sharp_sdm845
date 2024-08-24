@@ -116,3 +116,13 @@ source "drivers/soc/qcom/sharp/pnp/Kconfig"
 source "drivers/soc/qcom/sharp/shboot/Kconfig"
 
 endmenu
+
+menu "SHARP SHDIAG SMEM driver"
+
+comment "SHARP SHDIAG SMEM driver"
+
+config SHARP_SHDIAG_SMD
+	tristate "SHARP SHDIAG SMEM DRIVER"
+	depends on SHARP_SMEM_CUST
+	default n
+endmenu
