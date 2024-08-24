@@ -1080,7 +1080,9 @@ __acc_function_bind(struct usb_configuration *c,
 	int			id;
 	int			ret;
 
+#ifdef CONFIG_USB_DEBUG_SHARP_LOG
 	DBG(cdev, "acc_function_bind dev: %pK\n", dev);
+#endif /* CONFIG_USB_DEBUG_SHARP_LOG */
 
 	if (configfs) {
 		if (acc_string_defs[INTERFACE_STRING_INDEX].id == 0) {

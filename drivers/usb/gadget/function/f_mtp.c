@@ -1296,7 +1296,9 @@ fail:
 
 static int mtp_open(struct inode *ip, struct file *fp)
 {
+#ifdef CONFIG_USB_DEBUG_SHARP_LOG
 	printk(KERN_INFO "mtp_open\n");
+#endif /* CONFIG_USB_DEBUG_SHARP_LOG */
 	if (mtp_lock(&_mtp_dev->open_excl)) {
 		pr_err("%s mtp_release not called returning EBUSY\n", __func__);
 		return -EBUSY;
@@ -1312,7 +1314,9 @@ static int mtp_open(struct inode *ip, struct file *fp)
 
 static int mtp_release(struct inode *ip, struct file *fp)
 {
+#ifdef CONFIG_USB_DEBUG_SHARP_LOG
 	printk(KERN_INFO "mtp_release\n");
+#endif /* CONFIG_USB_DEBUG_SHARP_LOG */
 
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;

@@ -961,9 +961,11 @@ static int set_config(struct usb_composite_dev *cdev,
 		result = 0;
 	}
 
+#ifdef CONFIG_USB_DEBUG_SHARP_LOG
 	INFO(cdev, "%s config #%d: %s\n",
 	     usb_speed_string(gadget->speed),
 	     number, c ? c->label : "unconfigured");
+#endif /* CONFIG_USB_DEBUG_SHARP_LOG */
 
 	if (!c)
 		goto done;
