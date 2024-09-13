@@ -20,19 +20,19 @@
 		sharp,shled-leds-calib-01 {
 			red = <30>;
 			green = <30>;
-			blue = <32>;
+			blue = <30>;
 		};
 
 		sharp,shled-leds-calib-05 {
 			red = <30>;
 			green = <30>;
-			blue = <32>;
+			blue = <30>;
 		};
 
 		sharp,shled-leds-calib-06 {
 			red = <30>;
 			green = <30>;
-			blue = <32>;
+			blue = <30>;
 		};
 	};
 };
