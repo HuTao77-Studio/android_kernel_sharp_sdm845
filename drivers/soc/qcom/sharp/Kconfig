@@ -1,0 +1,7 @@
+#
+# SHARP configuration
+#
+
+menu "SHARP Device Drivers for Qualcomm SOC"
+
+endmenu
