@@ -54,6 +54,7 @@
 #include <linux/platform_device.h>
 #include <linux/moduleparam.h>
 #include <net/cfg80211.h>
+#include <linux/of.h>
 #include "core.h"
 #include "reg.h"
 #include "rdev-ops.h"
@@ -494,6 +495,19 @@ static int reg_query_builtin(const char *alpha2)
 
 	if (!regdom)
 		return -ENODATA;
+
+	if (i < reg_regdb_size-1 &&
+		alpha2_equal(alpha2, reg_regdb[i+1]->alpha2)) {
+		struct device_node *root = of_find_node_by_path("/");
+		u32 id;
+		if (of_property_read_u32_index(root, "qcom,board-id", 0, &id) == 0) {
+			pr_debug("/qcom,board-id = %d\n", id);
+			if (id == 63) {
+				pr_debug("Regulatory domain %s (144ch W58 enabled)\n", alpha2);
+				regdom = reg_regdb[i+1];
+			}
+		}
+	}
 
 	request = kzalloc(sizeof(struct reg_regdb_apply_request), GFP_KERNEL);
 	if (!request)
@@ -1786,11 +1800,6 @@ static void handle_band_custom(struct wiphy *wiphy,
 	if (!sband)
 		return;
 
-	/*
-	 * We currently assume that you always want at least 20 MHz,
-	 * otherwise channel 12 might get enabled if this rule is
-	 * compatible to US, which permits 2402 - 2472 MHz.
-	 */
 	for (i = 0; i < sband->n_channels; i++)
 		handle_channel_custom(wiphy, &sband->channels[i], regd,
 				      MHZ_TO_KHZ(20));
