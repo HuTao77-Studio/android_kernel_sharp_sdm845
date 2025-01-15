@@ -36,6 +36,13 @@ config SHARP_HANDLE_PANIC
 	help
 	  Enable SHARP handler for panic.
 
+config SHARP_KERNEL_PANIC_ON_PWRKEY
+	bool "Enable SHARP pwr key panic."
+	depends on SHARP_HANDLE_PANIC
+	default n
+	help
+	  Press the pwr key to force a kernel panic.
+
 config SHARP_HANDLE_DLOAD
 	bool "Enable SHARP handler for dload."
 	depends on SHARP_SHLOG
