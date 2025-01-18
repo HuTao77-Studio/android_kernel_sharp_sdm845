@@ -47,19 +47,16 @@
 #define DRM_BASE_FPS_120                (120)
 
 #if defined(CONFIG_ARCH_DIO) || defined(FEATURE_SH_DISPLAY_MODEL_DIO)
-    #define DRM_BASE_FPS_DEFAULT        DRM_BASE_FPS_60
-    #define DRM_BASE_MAX_FPS            DRM_BASE_FPS_100
+    #define DRM_BASE_FPS_DEFAULT        DRM_BASE_FPS_100
 #elif defined(CONFIG_ARCH_JOHNNY) || defined(FEATURE_SH_DISPLAY_MODEL_JOHNNY)
     #define DRM_BASE_FPS_DEFAULT        DRM_BASE_FPS_60
-    #define DRM_BASE_MAX_FPS            DRM_BASE_FPS_60
 #elif defined(CONFIG_ARCH_PUCCI) || defined(FEATURE_SH_DISPLAY_MODEL_PUCCI)
-    #define DRM_BASE_FPS_DEFAULT        DRM_BASE_FPS_60
-    #define DRM_BASE_MAX_FPS            DRM_BASE_FPS_120
+    #define DRM_BASE_FPS_DEFAULT        DRM_BASE_FPS_120
 #else
     #define DRM_BASE_FPS_DEFAULT        DRM_BASE_FPS_60
-    #define DRM_BASE_MAX_FPS            DRM_BASE_FPS_60
 #endif
 
+#define DRM_BASE_MAX_FPS                DRM_BASE_FPS_DEFAULT
 
 enum {
     MDP_INTERNAL_OSC_TYPE_A,
