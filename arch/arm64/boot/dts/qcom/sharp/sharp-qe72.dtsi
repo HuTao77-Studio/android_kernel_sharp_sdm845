@@ -36,7 +36,7 @@
                 type = "ext4";
                 mnt_flags = "nosuid,nodev,noatime,barrier=1,noinit_itable";
                 fsmgr_flags = "check,notrim,nofail";
-                status = "ok";
+                status = "disable";
             };
 
         };

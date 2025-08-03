@@ -66,6 +66,7 @@
                 type = "ext4";
                 mnt_flags = "ro,barrier=1,discard";
                 fsmgr_flags = "wait,slotselect,avb";
+                status = "disable";
             };
             odm {
                 compatible = "android,odm";
@@ -73,7 +74,7 @@
                 type = "ext4";
                 mnt_flags = "ro,barrier=1,discard";
                 fsmgr_flags = "wait,slotselect,avb";
-                status = "ok";
+                status = "disable";
             };
             product {
                 compatible = "android,product";
@@ -81,7 +82,7 @@
                 type = "ext4";
                 mnt_flags = "ro,barrier=1,discard";
                 fsmgr_flags = "wait,slotselect,avb";
-                status = "ok";
+                status = "disable";
             };
 
         };
